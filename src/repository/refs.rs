@@ -1,6 +1,7 @@
+use crate::lockfile::Lockfile;
 use crate::oid::Oid;
 use anyhow::Context;
-use std::{fs, fs::File, io::Write, path::PathBuf};
+use std::{fs, path::PathBuf};
 
 pub struct Refs {
     root: PathBuf,
@@ -12,9 +13,18 @@ impl Refs {
     }
 
     pub fn set_head(&self, oid: &Oid) -> Result<(), anyhow::Error> {
-        File::create(self.root.join("HEAD"))?
-            .write_all(oid.to_string().as_bytes())
-            .with_context(|| "Could not write HEAD reference")
+        let head_path = self.root.join("HEAD");
+        let mut lockfile = Lockfile::new(head_path.clone());
+
+        lockfile
+            .hold_for_update()
+            .with_context(|| format!("Could not acquire lock on file: {:?}", head_path.clone()))?;
+
+        lockfile
+            .write((oid.to_string() + "\n").as_bytes())
+            .with_context(|| "Could not write HEAD reference")?;
+        lockfile.commit()?;
+        Ok(())
     }
 
     fn head_path(&self) -> PathBuf {

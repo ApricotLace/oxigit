@@ -45,6 +45,10 @@ impl Db {
         let group_path = self.objects_path().join(group);
         let object_path = group_path.join(rest);
 
+        if let Ok(true) = fs::exists(&object_path) {
+            return Ok(());
+        }
+
         let temp_path = group_path.join(generate_temp_name());
 
         fs::create_dir_all(group_path)?;

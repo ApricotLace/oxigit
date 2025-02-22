@@ -6,6 +6,7 @@ use cmd::Commands;
 use repository::Repository;
 
 mod cmd;
+pub mod lockfile;
 pub mod oid;
 mod repository;
 

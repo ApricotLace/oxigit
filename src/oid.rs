@@ -32,16 +32,10 @@ impl Display for Oid {
     }
 }
 
-impl From<Oid> for String {
-    fn from(value: Oid) -> Self {
-        value.to_string()
-    }
-}
-
 impl From<String> for Oid {
     fn from(value: String) -> Self {
         Self {
-            hash: hex::decode(value).unwrap().try_into().unwrap(),
+            hash: hex::decode(value.trim()).unwrap().try_into().unwrap(),
         }
     }
 }
