@@ -1,0 +1,17 @@
+[package]
+name = "oxigit"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.89"
+base16ct = { version = "0.2.0", features = ["std"] }
+bstr = "1.10.0"
+chrono = { version = "0.4.38", features = ["std", "clock"] }
+clap = { version = "4.5.20", features = ["derive"] }
+email_address = "0.2.9"
+flate2 = "1.0.34"
+hex = "0.4.3"
+rand = "0.8.5"
+sha1 = "0.10.6"
+walkdir = "2.5.0"

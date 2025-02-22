@@ -1,0 +1,125 @@
+use std::{
+    env,
+    ffi::CString,
+    fs,
+    io::{self, Read},
+    path::PathBuf,
+};
+
+use anyhow::Context;
+use chrono::Local;
+use db::Db;
+use object::{
+    blob::Blob,
+    commit::{self, Commit},
+    tree::Tree,
+};
+use workspace::Workspace;
+
+pub mod db;
+pub mod object;
+pub mod refs;
+pub mod workspace;
+
+pub struct ConfigUser {
+    pub name: String,
+    pub email: String,
+}
+
+pub struct Config {
+    pub user: ConfigUser,
+}
+
+fn env_or_default(key: &str) -> String {
+    env::var_os(key)
+        .map(|var| var.to_string_lossy().to_string())
+        .unwrap_or_default()
+}
+
+impl Config {
+    fn from_env() -> Self {
+        let name = env_or_default("GIT_AUTHOR_NAME");
+        let email = env_or_default("GIT_AUTHOR_EMAIL");
+
+        Self {
+            user: ConfigUser { name, email },
+        }
+    }
+}
+
+pub struct Repository {
+    root: PathBuf,
+    workspace: Workspace,
+    db: Db,
+    refs: refs::Refs,
+    config: Config,
+}
+
+impl Repository {
+    pub fn open(path: PathBuf) -> Self {
+        let workspace_path = path.clone();
+        let root_path = path.join(".git");
+
+        Self {
+            root: path,
+            workspace: Workspace::new(workspace_path),
+            db: Db::new(root_path.clone()),
+            refs: refs::Refs::new(root_path.clone()),
+            config: Config::from_env(),
+        }
+    }
+
+    pub fn init(&self) -> Result<(), io::Error> {
+        fs::create_dir(self.root.join(".git"))?;
+        self.db.init()?;
+        Ok(())
+    }
+
+    pub fn commit(&self) -> Result<(), anyhow::Error> {
+        let mut tree = Tree::new();
+
+        for f in self.workspace.list_files()? {
+            let data = self.workspace.read_file(&f)?;
+
+            let path = CString::new(f.as_os_str().as_encoded_bytes())
+                .with_context(|| "Invalid filename: it contains null bytes.")?;
+
+            let blob_oid = self.db.store_object(Blob::new(data).into())?;
+
+            tree.add_entry(path, blob_oid)?;
+        }
+
+        let tree_oid = self
+            .db
+            .store_object(tree.into())
+            .with_context(|| "Could not store tree")?;
+
+        let parent = match self.refs.get_head() {
+            Ok(head) => Some(head),
+            Err(_) => None,
+        };
+
+        let name = &self.config.user.name;
+        let email = &self.config.user.email;
+
+        let author = commit::Author::new(name.to_owned(), email.to_owned(), Local::now());
+
+        let mut commit_message = String::new();
+        io::stdin().read_to_string(&mut commit_message)?;
+
+        let commit = Commit::new(tree_oid, parent, author, commit_message.clone());
+
+        let commit_oid = self
+            .db
+            .store_object(commit.into())
+            .with_context(|| "Could not store commit")?;
+
+        self.refs.set_head(&commit_oid)?;
+
+        let commit_message_fl = commit_message.lines().next().unwrap_or_default();
+
+        println!("[(root-commit) {}] {}", &commit_oid, commit_message_fl);
+
+        Ok(())
+    }
+}
