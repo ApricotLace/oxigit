@@ -1,3 +1,4 @@
+use super::Object;
 use crate::oid::Oid;
 
 use chrono::{DateTime, FixedOffset, TimeZone};
@@ -31,6 +32,7 @@ impl Author {
 
 #[derive(Debug, Clone)]
 pub struct Commit {
+    oid: Option<Oid>,
     tree: Oid,
     parent: Option<Oid>,
     author: Author,
@@ -40,14 +42,25 @@ pub struct Commit {
 impl Commit {
     pub fn new(tree_oid: Oid, parent: Option<Oid>, author: Author, message: String) -> Self {
         Self {
+            oid: None,
             tree: tree_oid,
             parent,
             author,
             message,
         }
     }
+}
 
-    pub fn to_bytes(&self) -> Vec<u8> {
+impl Object for Commit {
+    fn kind(&self) -> &[u8] {
+        b"commit"
+    }
+
+    fn set_oid(&mut self, oid: Oid) {
+        self.oid = Some(oid);
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
         format!(
             "tree {}\n{}author {}\ncommiter {}\n\n{}",
             self.tree,

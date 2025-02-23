@@ -3,6 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use lexical_sort::natural_lexical_cmp;
 use walkdir::WalkDir;
 
 pub struct Workspace {
@@ -33,6 +34,7 @@ impl Workspace {
             }
         }
 
+        list_result.sort_by(|a, b| natural_lexical_cmp(a.to_str().unwrap(), b.to_str().unwrap()));
         Ok(list_result)
     }
 

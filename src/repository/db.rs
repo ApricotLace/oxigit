@@ -11,7 +11,7 @@ use rand::distributions::{Alphanumeric, DistString};
 
 use crate::oid::Oid;
 
-use super::object::{DbObject, Object};
+use super::object::Object;
 
 pub struct Db {
     root: PathBuf,
@@ -32,12 +32,21 @@ impl Db {
         Ok(())
     }
 
-    pub fn store_object(&self, object: Object) -> Result<Oid, anyhow::Error> {
-        let object: DbObject = object.into();
+    pub fn store_object(&self, object: &mut impl Object) -> Result<Oid, anyhow::Error> {
+        let serialized_object = object.to_bytes();
+        let mut content: Vec<u8> = vec![];
+        content.extend_from_slice(object.kind());
+        content.push(b' ');
+        content.extend_from_slice(serialized_object.len().to_string().as_bytes());
+        content.push(0);
+        content.extend_from_slice(&serialized_object);
 
-        self.write_object(&object.oid().to_string(), object.data())?;
+        let oid = Oid::new(&content);
+        object.set_oid(oid.clone());
 
-        Ok(*object.oid())
+        self.write_object(&oid.to_string(), &content)?;
+
+        Ok(oid)
     }
 
     pub fn write_object(&self, oid: &str, content: &[u8]) -> Result<(), anyhow::Error> {

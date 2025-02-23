@@ -12,6 +12,8 @@ clap = { version = "4.5.20", features = ["derive"] }
 email_address = "0.2.9"
 flate2 = "1.0.34"
 hex = "0.4.3"
+indexmap = "2.7.1"
+lexical-sort = "0.3.1"
 rand = "0.8.5"
 sha1 = "0.10.6"
 walkdir = "2.5.0"
