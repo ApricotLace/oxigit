@@ -7,14 +7,17 @@ use std::{
 use anyhow::Context;
 use chrono::Local;
 use db::Db;
+use index::Index;
 use object::{
     blob::Blob,
     commit::{self, Commit},
     tree::Tree,
 };
+use refs::Refs;
 use workspace::Workspace;
 
 pub mod db;
+pub mod index;
 pub mod object;
 pub mod refs;
 pub mod workspace;
@@ -49,8 +52,9 @@ pub struct Repository {
     root: PathBuf,
     workspace: Workspace,
     db: Db,
-    refs: refs::Refs,
+    refs: Refs,
     config: Config,
+    index: Index,
 }
 
 impl Repository {
@@ -64,6 +68,7 @@ impl Repository {
             db: Db::new(root_path.clone()),
             refs: refs::Refs::new(root_path.clone()),
             config: Config::from_env(),
+            index: Index::new(root_path.clone()),
         }
     }
 
@@ -73,11 +78,25 @@ impl Repository {
         Ok(())
     }
 
+    pub fn add(&mut self, path: PathBuf) -> Result<(), anyhow::Error> {
+        let data = self.workspace.read_file(&path)?;
+        let stats = self.workspace.stat_file(&path)?;
+
+        let blob_oid = self.db.store_object(&mut Blob::new(data))?;
+
+        self.index.add(path, blob_oid, stats)?;
+
+        self.index.write_updates()?;
+
+        Ok(())
+    }
+
     pub fn commit(&self) -> Result<(), anyhow::Error> {
         let mut tree = Tree::new();
 
         for f in self.workspace.list_files()? {
             let data = self.workspace.read_file(&f)?;
+            // TODO: use workspace.stat_file
 
             let blob_oid = self.db.store_object(&mut Blob::new(data))?;
 

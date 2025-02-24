@@ -17,9 +17,12 @@ pub enum Commands {
         root_path: Option<PathBuf>,
     },
 
-    /// Commit
-    Commit {
-        /// Root path
-        root_path: Option<PathBuf>,
+    /// Add
+    Add {
+        /// Path
+        path: Option<PathBuf>,
     },
+
+    /// Commit
+    Commit {},
 }

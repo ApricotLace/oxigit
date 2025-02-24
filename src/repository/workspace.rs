@@ -41,4 +41,8 @@ impl Workspace {
     pub fn read_file(&self, path: &Path) -> Result<Vec<u8>, io::Error> {
         fs::read(self.root.join(path))
     }
+
+    pub fn stat_file(&self, path: &Path) -> Result<fs::Metadata, io::Error> {
+        fs::metadata(path)
+    }
 }

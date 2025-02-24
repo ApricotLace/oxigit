@@ -14,14 +14,20 @@ fn main() -> Result<(), anyhow::Error> {
     let cli = cmd::Cli::parse();
 
     match &cli.command {
-        Commands::Commit { root_path } => {
-            let root = match root_path {
-                Some(root) => root.to_path_buf(),
-                None => {
-                    env::current_dir().with_context(|| "Can't get current working directory")?
-                }
-            };
-            Repository::open(root).commit()?;
+        Commands::Commit {} => {
+            Repository::open(
+                env::current_dir().with_context(|| "Can't get current working directory")?,
+            )
+            .commit()?;
+        }
+        Commands::Add { path } => {
+            Repository::open(
+                env::current_dir().with_context(|| "Can't get current working directory")?,
+            )
+            .add(
+                path.clone()
+                    .with_context(|| "Please provide a valid path to add")?,
+            )?;
         }
         Commands::Init { root_path } => {
             let root = match root_path {
