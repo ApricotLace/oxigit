@@ -15,11 +15,15 @@ impl Workspace {
         Self { root: path }
     }
 
-    pub fn list_files(&self) -> Result<Vec<PathBuf>, anyhow::Error> {
+    pub fn list_files(&self, path: Option<&PathBuf>) -> Result<Vec<PathBuf>, anyhow::Error> {
         let db_path = self.root.join(".git");
+        let path = match path {
+            Some(p) => self.root.join(p),
+            None => self.root.clone(),
+        };
 
         let mut list_result: Vec<PathBuf> = Vec::new();
-        for entry in WalkDir::new(&self.root)
+        for entry in WalkDir::new(path)
             .follow_links(false)
             .follow_root_links(false)
             .same_file_system(true)

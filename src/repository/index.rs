@@ -1,5 +1,7 @@
-use indexmap::IndexMap;
+use lexical_sort::natural_lexical_cmp;
 use sha1::{Digest, Sha1};
+use std::cmp::Ordering;
+use std::collections::BTreeMap;
 use std::fs::Metadata;
 use std::os::unix::fs::MetadataExt;
 use std::{ffi::CString, path::PathBuf};
@@ -98,16 +100,34 @@ impl IndexEntry {
     }
 }
 
+#[derive(Eq, PartialEq)]
+struct NaturalCString(CString);
+
+impl PartialOrd for NaturalCString {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for NaturalCString {
+    fn cmp(&self, other: &Self) -> Ordering {
+        natural_lexical_cmp(
+            self.0.to_str().unwrap_or_default(),
+            other.0.to_str().unwrap_or_default(),
+        )
+    }
+}
+
 pub struct Index {
     lockfile: Lockfile,
-    entries: IndexMap<CString, IndexEntry>,
+    entries: BTreeMap<NaturalCString, IndexEntry>,
 }
 
 impl Index {
     pub fn new(root_path: PathBuf) -> Self {
         Index {
             lockfile: Lockfile::new(root_path.join("index")),
-            entries: IndexMap::new(),
+            entries: BTreeMap::new(),
         }
     }
 
@@ -118,10 +138,10 @@ impl Index {
         stat: std::fs::Metadata,
     ) -> Result<(), anyhow::Error> {
         self.entries.insert(
-            CString::new(
+            NaturalCString(CString::new(
                 path.to_str()
                     .with_context(|| "Can't convert path to CString")?,
-            )?,
+            )?),
             IndexEntry::new(path, oid, stat)?,
         );
         Ok(())

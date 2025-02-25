@@ -19,8 +19,9 @@ pub enum Commands {
 
     /// Add
     Add {
-        /// Path
-        path: Option<PathBuf>,
+        /// Paths to add
+        #[arg(required = true)]
+        paths: Vec<PathBuf>,
     },
 
     /// Commit

@@ -20,14 +20,11 @@ fn main() -> Result<(), anyhow::Error> {
             )
             .commit()?;
         }
-        Commands::Add { path } => {
+        Commands::Add { paths } => {
             Repository::open(
                 env::current_dir().with_context(|| "Can't get current working directory")?,
             )
-            .add(
-                path.clone()
-                    .with_context(|| "Please provide a valid path to add")?,
-            )?;
+            .add(paths)?;
         }
         Commands::Init { root_path } => {
             let root = match root_path {

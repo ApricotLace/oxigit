@@ -78,15 +78,19 @@ impl Repository {
         Ok(())
     }
 
-    pub fn add(&mut self, path: PathBuf) -> Result<(), anyhow::Error> {
-        let data = self.workspace.read_file(&path)?;
-        let stats = self.workspace.stat_file(&path)?;
+    pub fn add(&mut self, paths: &Vec<PathBuf>) -> Result<(), anyhow::Error> {
+        for p in paths {
+            for path in self.workspace.list_files(Some(p))? {
+                let data = self.workspace.read_file(&path)?;
+                let stats = self.workspace.stat_file(&path)?;
 
-        let blob_oid = self.db.store_object(&mut Blob::new(data))?;
+                let blob_oid = self.db.store_object(&mut Blob::new(data))?;
 
-        self.index.add(path, blob_oid, stats)?;
+                self.index.add(path, blob_oid, stats)?;
 
-        self.index.write_updates()?;
+                self.index.write_updates()?;
+            }
+        }
 
         Ok(())
     }
@@ -94,7 +98,7 @@ impl Repository {
     pub fn commit(&self) -> Result<(), anyhow::Error> {
         let mut tree = Tree::new();
 
-        for f in self.workspace.list_files()? {
+        for f in self.workspace.list_files(None)? {
             let data = self.workspace.read_file(&f)?;
             // TODO: use workspace.stat_file
 
