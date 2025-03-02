@@ -79,6 +79,8 @@ impl Repository {
     }
 
     pub fn add(&mut self, paths: &Vec<PathBuf>) -> Result<(), anyhow::Error> {
+        self.index.load_for_update()?;
+
         for p in paths {
             for path in self.workspace.list_files(Some(p))? {
                 let data = self.workspace.read_file(&path)?;
@@ -95,18 +97,13 @@ impl Repository {
         Ok(())
     }
 
-    pub fn commit(&self) -> Result<(), anyhow::Error> {
+    pub fn commit(&mut self) -> Result<(), anyhow::Error> {
         let mut tree = Tree::new();
+        self.index.load()?;
 
-        for f in self.workspace.list_files(None)? {
-            let data = self.workspace.read_file(&f)?;
-            // TODO: use workspace.stat_file
-
-            let blob_oid = self.db.store_object(&mut Blob::new(data))?;
-
-            tree.add_entry(f, blob_oid)?;
+        for entry in self.index.entries.values() {
+            tree.add_entry(PathBuf::from(entry.path.to_str().unwrap()), entry.oid)?;
         }
-
         tree.traverse(&|tree| self.db.store_object(tree))?;
 
         let tree_oid = self

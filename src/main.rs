@@ -5,6 +5,7 @@ use clap::Parser;
 use cmd::Commands;
 use repository::Repository;
 
+pub mod checksum;
 mod cmd;
 pub mod lockfile;
 pub mod oid;

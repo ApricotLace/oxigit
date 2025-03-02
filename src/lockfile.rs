@@ -4,9 +4,9 @@ use std::io::Write;
 use std::path::PathBuf;
 
 pub struct Lockfile {
-    file_path: PathBuf,
+    pub file_path: PathBuf,
     lock_path: PathBuf,
-    lock: Option<File>,
+    pub lock: Option<File>,
 }
 
 impl Lockfile {
@@ -53,6 +53,13 @@ impl Lockfile {
         self.lock = None;
         fs::rename(&self.lock_path, &self.file_path)?;
 
+        Ok(())
+    }
+
+    pub fn rollback(&mut self) -> Result<(), anyhow::Error> {
+        self.fail_on_stale_lock()?;
+        self.lock = None;
+        fs::remove_file(&self.lock_path)?;
         Ok(())
     }
 

@@ -39,3 +39,11 @@ impl From<String> for Oid {
         }
     }
 }
+
+impl From<&[u8]> for Oid {
+    fn from(value: &[u8]) -> Self {
+        Self {
+            hash: value.try_into().unwrap(),
+        }
+    }
+}
